@@ -1,40 +1,41 @@
-# Automatic-Vehicle-Parking-System-using-STM32-Nucleo-L031K6
+# Experiment: Design and Implementation of a Water Level Indicator Using STM32
 
 ## Aim
 
-To design and implement an **Automatic Vehicle Parking System using STM32 Nucleo-L031K6** that detects the occupancy of parking slots, determines the number of available spaces, and indicates when the parking area is full.
+To design and implement a **Water Level Indicator using STM32 Nucleo-L031K6** that measures the water level using an analog input and displays the water level as **LOW, MEDIUM, or HIGH** on the Wokwi Serial Monitor.
 
 ---
 
 ## Components Required
 
 - STM32 Nucleo-L031K6
-- Two pushbuttons to simulate vehicle sensors
-- Onboard LED to indicate parking full status
+- Potentiometer to simulate the water-level sensor
 - Wokwi Simulator
+- Virtual Serial Monitor
 - Connecting wires
-- Serial Monitor
 
 ---
 
 ## Theory
 
-An **Automatic Vehicle Parking System** is used to detect the availability of parking spaces and provide information about whether parking slots are **available or occupied**.
+A **Water Level Indicator** is used to monitor the amount of water present in a tank.
 
-In a practical parking system, **IR sensors or ultrasonic sensors** can be used to detect the presence of vehicles in individual parking slots.
+In this experiment, a **potentiometer** is used in Wokwi to simulate the output of a water-level sensor. The potentiometer produces an analog voltage between **0 V and 3.3 V**.
 
-In this Wokwi experiment, **pushbuttons are used to simulate the vehicle sensors**.
+The analog signal is connected to the **PA0 ADC input** of the STM32 Nucleo-L031K6.
 
-Two parking slots are considered:
+The STM32 contains a **12-bit Analog-to-Digital Converter (ADC)**. Therefore, the analog input voltage is converted into a digital value between:
 
-- **Pushbutton 1** represents the sensor for Parking Slot 1.
-- **Pushbutton 2** represents the sensor for Parking Slot 2.
+- **0** → Minimum water level
+- **4095** → Maximum water level
 
-When a pushbutton is pressed, the STM32 changes the corresponding parking slot status between **AVAILABLE** and **OCCUPIED**.
+The ADC value is converted into a percentage, and the water level is classified as:
 
-The STM32 calculates the number of available parking spaces. When both parking slots are occupied, the parking area is considered **FULL**, and the onboard LED is switched **ON**.
+- **LOW**
+- **MEDIUM**
+- **HIGH**
 
-The parking-slot information is also displayed on the **Wokwi Serial Monitor** using UART communication.
+The water-level information is displayed on the **Wokwi Serial Monitor** using UART communication.
 
 ---
 
@@ -42,58 +43,52 @@ The parking-slot information is also displayed on the **Wokwi Serial Monitor** u
 
 | Component | STM32 Pin | Function |
 |---|---|---|
-| Slot 1 Pushbutton | PA12 | Digital Input |
-| Slot 2 Pushbutton | PB0 | Digital Input |
-| Parking Full LED | PB3 | Digital Output |
-| USART2 TX | PA2 | Serial Data Transmission |
-| USART2 RX | PA15 | Serial Data Reception |
-| Pushbutton Common | GND | Ground |
+| Potentiometer SIG | PA0 | ADC input |
+| Potentiometer VCC | 3.3V | Power supply |
+| Potentiometer GND | GND | Ground |
+| USART2 TX | PA2 | Serial data transmission |
+| USART2 RX | PA15 | Serial data reception |
 
 ---
 
 ## Block Diagram
 
 ~~~text
-     Slot 1                 Slot 2
-   Pushbutton             Pushbutton
- (Vehicle Sensor)       (Vehicle Sensor)
-       |                      |
-       v                      v
-     PA12                    PB0
-       |                      |
-       +----------+-----------+
-                  |
-                  v
-       +-------------------------+
-       | STM32 Nucleo-L031K6     |
-       |                         |
-       | Read Slot Status        |
-       |          |              |
-       |          v              |
-       | Calculate Available     |
-       | Parking Spaces          |
-       +-----------+-------------+
-                   |
-          +--------+--------+
-          |                 |
-          v                 v
-       PB3 LED           USART2
-          |                 |
-          v                 v
-     Parking Full      Serial Monitor
-      Indicator        Parking Status
+       Potentiometer
+   (Water Level Sensor)
+          │
+          │ Analog Signal
+          ▼
+       PA0 / ADC
+          │
+          ▼
++-----------------------+
+| STM32 Nucleo-L031K6   |
+|                       |
+| ADC Conversion        |
+|        ↓              |
+| Water Level %         |
+|        ↓              |
+| LOW / MEDIUM / HIGH   |
++-----------+-----------+
+            │
+            │ USART2
+            ▼
+      Serial Monitor
+            │
+            ▼
+   Water Level Display
 ~~~
 
 ---
 
-## Parking Status Conditions
+## Water Level Classification
 
-| Slot 1 | Slot 2 | Available Slots | Parking Status | LED |
-|---|---|---:|---|---|
-| Available | Available | 2 | Space Available | OFF |
-| Occupied | Available | 1 | Space Available | OFF |
-| Available | Occupied | 1 | Space Available | OFF |
-| Occupied | Occupied | 0 | Parking Full | ON |
+| Water Level | Percentage | Indication |
+|---|---:|---|
+| Low | 0–30% | LOW |
+| Medium | 31–70% | MEDIUM |
+| High | 71–100% | HIGH |
 
 ---
 
@@ -102,251 +97,510 @@ The parking-slot information is also displayed on the **Wokwi Serial Monitor** u
 1. Start the program.
 2. Initialize the STM32 HAL library.
 3. Configure the system clock.
-4. Configure **PA12** as the Slot 1 sensor input.
-5. Configure **PB0** as the Slot 2 sensor input.
-6. Configure **PB3** as the Parking Full LED output.
-7. Enable internal pull-up resistors for the pushbutton inputs.
-8. Initialize USART2 for serial communication.
-9. Set both parking slots initially as **AVAILABLE**.
-10. Read the status of the Slot 1 and Slot 2 pushbuttons.
-11. When Pushbutton 1 is pressed, change the status of Slot 1.
-12. When Pushbutton 2 is pressed, change the status of Slot 2.
-13. Calculate the number of available parking slots.
-14. If both slots are occupied, switch the Parking Full LED **ON**.
-15. If at least one parking slot is available, keep the LED **OFF**.
-16. Display the slot status and number of available spaces on the Serial Monitor.
-17. Repeat the process continuously.
+4. Configure **PA0 as an analog input**.
+5. Initialize ADC1.
+6. Initialize USART2 for serial communication.
+7. Read the analog value from the potentiometer.
+8. Convert the ADC reading into water-level percentage.
+9. Compare the percentage with predefined limits.
+10. If the water level is less than or equal to 30%, display **LOW**.
+11. If the water level is between 31% and 70%, display **MEDIUM**.
+12. If the water level is greater than 70%, display **HIGH**.
+13. Display the ADC value, water-level percentage, and status on the Serial Monitor.
+14. Wait for one second.
+15. Repeat continuously.
 
 ---
 
+## Program
+```
+
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stm32l0xx_hal.h>
+
+/* Built-in LED representing the water pump */
+#define PUMP_LED_PORT              GPIOB
+#define PUMP_LED_PIN               GPIO_PIN_3
+#define PUMP_LED_CLK_ENABLE()      __HAL_RCC_GPIOB_CLK_ENABLE()
+
+/* Soil-moisture sensor analog input */
+#define SOIL_SENSOR_PORT           GPIOA
+#define SOIL_SENSOR_PIN            GPIO_PIN_0
+#define SOIL_SENSOR_CHANNEL        ADC_CHANNEL_0
+
+/* USART2 virtual COM port pins */
+#define VCP_TX_PIN                 GPIO_PIN_2
+#define VCP_RX_PIN                 GPIO_PIN_15
+
+/*
+ * Higher ADC value = dry soil
+ * Lower ADC value  = wet soil
+ *
+ * Separate thresholds provide hysteresis and prevent
+ * repeated ON/OFF switching near one threshold.
+ */
+#define PUMP_ON_THRESHOLD          2800
+#define PUMP_OFF_THRESHOLD         2200
+
+UART_HandleTypeDef huart2;
+ADC_HandleTypeDef hadc1;
+
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_USART2_UART_Init(void);
+static uint32_t Read_Soil_Moisture(void);
+void Error_Handler(void);
+
+int main(void)
+{
+  uint32_t soilValue;
+  uint32_t moisturePercentage;
+  uint8_t pumpStatus = 0;
+
+  HAL_Init();
+  SystemClock_Config();
+
+  MX_GPIO_Init();
+  MX_ADC1_Init();
+  MX_USART2_UART_Init();
+
+  printf("\r\n====================================\r\n");
+  printf("STM32 Smart Irrigation System\r\n");
+  printf("====================================\r\n");
+  printf("PA0 : Soil-moisture sensor\r\n");
+  printf("PB3 : Pump indicator LED\r\n\r\n");
+
+  /*
+   * Calibrate the ADC before taking readings.
+   */
+  if (HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  while (1)
+  {
+    soilValue = Read_Soil_Moisture();
+
+    /*
+     * Convert ADC value into moisture percentage.
+     *
+     * ADC = 0    means approximately 100% wet.
+     * ADC = 4095 means approximately 0% wet.
+     */
+    moisturePercentage =
+        100U - ((soilValue * 100U) / 4095U);
+
+    /*
+     * Turn ON the pump when the soil becomes dry.
+     */
+    if ((soilValue >= PUMP_ON_THRESHOLD) && (pumpStatus == 0))
+    {
+      pumpStatus = 1;
+
+      HAL_GPIO_WritePin(
+          PUMP_LED_PORT,
+          PUMP_LED_PIN,
+          GPIO_PIN_SET);
+
+      printf("Soil is dry: Pump switched ON\r\n");
+    }
+
+    /*
+     * Turn OFF the pump when sufficient moisture is reached.
+     */
+    else if ((soilValue <= PUMP_OFF_THRESHOLD) && (pumpStatus == 1))
+    {
+      pumpStatus = 0;
+
+      HAL_GPIO_WritePin(
+          PUMP_LED_PORT,
+          PUMP_LED_PIN,
+          GPIO_PIN_RESET);
+
+      printf("Soil is wet: Pump switched OFF\r\n");
+    }
+
+    printf("ADC value: %lu | Moisture: %lu%% | Pump: %s\r\n",
+           (unsigned long)soilValue,
+           (unsigned long)moisturePercentage,
+           pumpStatus ? "ON" : "OFF");
+
+    printf("------------------------------------\r\n");
+
+    HAL_Delay(1000);
+  }
+}
+
+/**
+ * Read the soil-moisture sensor through ADC1.
+ */
+static uint32_t Read_Soil_Moisture(void)
+{
+  uint32_t adcValue;
+
+  if (HAL_ADC_Start(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  if (HAL_ADC_PollForConversion(&hadc1, 100) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  adcValue = HAL_ADC_GetValue(&hadc1);
+
+  HAL_ADC_Stop(&hadc1);
+
+  return adcValue;
+}
+
+/**
+ * GPIO initialization.
+ */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  PUMP_LED_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /*
+   * Configure PB3 as the pump indicator output.
+   */
+  GPIO_InitStruct.Pin = PUMP_LED_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+
+  HAL_GPIO_Init(PUMP_LED_PORT, &GPIO_InitStruct);
+
+  /*
+   * Initially keep the pump OFF.
+   */
+  HAL_GPIO_WritePin(
+      PUMP_LED_PORT,
+      PUMP_LED_PIN,
+      GPIO_PIN_RESET);
+
+  /*
+   * Configure PA0 as an analog input.
+   */
+  GPIO_InitStruct.Pin = SOIL_SENSOR_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+
+  HAL_GPIO_Init(SOIL_SENSOR_PORT, &GPIO_InitStruct);
+}
+
+/**
+ * ADC1 initialization.
+ */
+static void MX_ADC1_Init(void)
+{
+  ADC_ChannelConfTypeDef channelConfig = {0};
+
+  __HAL_RCC_ADC1_CLK_ENABLE();
+
+  hadc1.Instance = ADC1;
+  hadc1.Init.OversamplingMode = DISABLE;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.SamplingTime = ADC_SAMPLETIME_39CYCLES_5;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DIRECTION_FORWARD;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.LowPowerFrequencyMode = DISABLE;
+  hadc1.Init.LowPowerAutoPowerOff = DISABLE;
+
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  channelConfig.Channel = SOIL_SENSOR_CHANNEL;
+  channelConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
+
+  if (HAL_ADC_ConfigChannel(&hadc1, &channelConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+ * System clock configuration.
+ */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+
+  __HAL_PWR_VOLTAGESCALING_CONFIG(
+      PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  RCC_OscInitStruct.OscillatorType =
+      RCC_OSCILLATORTYPE_HSI;
+
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue =
+      RCC_HSICALIBRATION_DEFAULT;
+
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLLMUL_4;
+  RCC_OscInitStruct.PLL.PLLDIV = RCC_PLLDIV_2;
+
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  RCC_ClkInitStruct.ClockType =
+      RCC_CLOCKTYPE_HCLK |
+      RCC_CLOCKTYPE_SYSCLK |
+      RCC_CLOCKTYPE_PCLK1 |
+      RCC_CLOCKTYPE_PCLK2;
+
+  RCC_ClkInitStruct.SYSCLKSource =
+      RCC_SYSCLKSOURCE_PLLCLK;
+
+  RCC_ClkInitStruct.AHBCLKDivider =
+      RCC_SYSCLK_DIV1;
+
+  RCC_ClkInitStruct.APB1CLKDivider =
+      RCC_HCLK_DIV1;
+
+  RCC_ClkInitStruct.APB2CLKDivider =
+      RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(
+          &RCC_ClkInitStruct,
+          FLASH_LATENCY_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  PeriphClkInit.PeriphClockSelection =
+      RCC_PERIPHCLK_USART2;
+
+  PeriphClkInit.Usart2ClockSelection =
+      RCC_USART2CLKSOURCE_PCLK1;
+
+  if (HAL_RCCEx_PeriphCLKConfig(
+          &PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+ * USART2 initialization.
+ */
+static void MX_USART2_UART_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_USART2_CLK_ENABLE();
+
+  /*
+   * PA2  -> USART2_TX
+   * PA15 -> USART2_RX
+   */
+  GPIO_InitStruct.Pin = VCP_TX_PIN | VCP_RX_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF4_USART2;
+
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling =
+      UART_ONE_BIT_SAMPLE_DISABLE;
+
+  huart2.AdvancedInit.AdvFeatureInit =
+      UART_ADVFEATURE_NO_INIT;
+
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+ * Error handler.
+ */
+void Error_Handler(void)
+{
+  HAL_GPIO_WritePin(
+      PUMP_LED_PORT,
+      PUMP_LED_PIN,
+      GPIO_PIN_RESET);
+
+  while (1)
+  {
+    /* Remain here when an initialization error occurs. */
+  }
+}
+
+/*
+ * Redirect printf() output to USART2.
+ */
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
+int _write(int file, uint8_t *ptr, int len)
+{
+  if ((file == STDOUT_FILENO) ||
+      (file == STDERR_FILENO))
+  {
+    HAL_UART_Transmit(
+        &huart2,
+        ptr,
+        len,
+        HAL_MAX_DELAY);
+
+    return len;
+  }
+
+  return -1;
+
+
+```
+
 ## Circuit Connections
 
-### Slot 1 Pushbutton
+### Potentiometer
 
-| Pushbutton Terminal | STM32 Connection |
+| Potentiometer Pin | STM32 Connection |
 |---|---|
-| Terminal 1 | PA12 |
-| Terminal 2 | GND |
-
-### Slot 2 Pushbutton
-
-| Pushbutton Terminal | STM32 Connection |
-|---|---|
-| Terminal 1 | PB0 |
-| Terminal 2 | GND |
-
-### Parking Full Indicator
-
-| Indicator | STM32 Connection |
-|---|---|
-| Onboard LED | PB3 |
-
-The program uses **internal pull-up resistors** for the pushbutton inputs. Therefore, external pull-up resistors are not required.
+| VCC | 3.3V |
+| GND | GND |
+| SIG / Middle Pin | PA0 |
 
 ---
 
 ## Circuit Diagram
 
 ~~~text
-        Slot 1 Pushbutton
-      (Vehicle Sensor 1)
-
-        +-------------+
-PA12 ---|             |
-        |   BUTTON    |
-GND  ---|             |
-        +-------------+
-
-
-        Slot 2 Pushbutton
-      (Vehicle Sensor 2)
-
-        +-------------+
-PB0  ---|             |
-        |   BUTTON    |
-GND  ---|             |
-        +-------------+
-
-
-       +---------------------------+
-       | STM32 Nucleo-L031K6       |
-       |                           |
-       | PA12 <- Slot 1 Sensor     |
-       | PB0  <- Slot 2 Sensor     |
-       |                           |
-       | PB3  -> Parking Full LED  |
-       |                           |
-       | PA2  -> USART2 TX         |
-       | PA15 -> USART2 RX         |
-       +-------------+-------------+
-                     |
-                     |
-                   USART2
-                     |
-                     v
-              Serial Monitor
+              Potentiometer
+         (Water Level Sensor)
+        +--------------------+
+3.3V ---| VCC                |
+GND  ---| GND                |
+        | SIG                 |
+        +--+-----------------+
+           |
+           |
+          PA0
+           |
+           v
++---------------------------+
+| STM32 Nucleo-L031K6       |
+|                           |
+| PA0  -> ADC Input         |
+|                           |
+| PA2  -> USART2 TX         |
+| PA15 -> USART2 RX         |
++-------------+-------------+
+              |
+              | UART
+              v
+       Wokwi Serial Monitor
 ~~~
-
----
-
-## Pushbutton Logic
-
-The pushbuttons are configured using the STM32 **internal pull-up resistors**.
-
-Therefore:
-
-- **Button Released → Logic HIGH (1)**
-- **Button Pressed → Logic LOW (0)**
-
-Initially:
-
-~~~text
-Slot 1 = AVAILABLE
-Slot 2 = AVAILABLE
-~~~
-
-When the Slot 1 pushbutton is pressed:
-
-~~~text
-Slot 1 = OCCUPIED
-Slot 2 = AVAILABLE
-
-Available Slots = 1
-~~~
-
-When the Slot 2 pushbutton is also pressed:
-
-~~~text
-Slot 1 = OCCUPIED
-Slot 2 = OCCUPIED
-
-Available Slots = 0
-Parking Status = FULL
-LED = ON
-~~~
-
-Pressing the corresponding pushbutton again changes the slot status back to **AVAILABLE**, simulating a vehicle leaving the parking slot.
-
----
-
-## Why Pushbuttons Are Used
-
-In an actual Automatic Vehicle Parking System, vehicle detection is normally performed using sensors such as:
-
-- IR sensors
-- Ultrasonic sensors
-- Proximity sensors
-
-For this Wokwi experiment, pushbuttons are used to **simulate vehicle detection**.
-
-A button press represents a change in the parking-slot condition.
-
-~~~text
-Wokwi Simulation            Actual System
-
-Pushbutton             ->   IR/Ultrasonic Sensor
-
-Button Press           ->   Vehicle Detected
-
-Button Press Again     ->   Vehicle Leaves
-
-PB3 LED                ->   Parking Full Indicator
-~~~
-
-This makes it easy to understand and test the parking-control logic without requiring an actual vehicle sensor.
 
 ---
 
 ## Procedure
 
-1. Open the **Wokwi Simulator**.
+1. Open **Wokwi**.
 2. Select the **STM32 Nucleo-L031K6** board.
-3. Add two pushbuttons.
-4. Connect one terminal of Pushbutton 1 to **PA12**.
-5. Connect the other terminal of Pushbutton 1 to **GND**.
-6. Connect one terminal of Pushbutton 2 to **PB0**.
-7. Connect the other terminal of Pushbutton 2 to **GND**.
-8. Use the onboard LED connected to **PB3** as the Parking Full indicator.
-9. Enter the STM32 HAL program for the Automatic Vehicle Parking System.
-10. Compile the program.
-11. Start the Wokwi simulation.
-12. Open the **Serial Monitor**.
-13. Press Pushbutton 1 to simulate a vehicle occupying Slot 1.
-14. Press Pushbutton 2 to simulate a vehicle occupying Slot 2.
-15. Observe the parking-slot status on the Serial Monitor.
-16. Verify that the onboard LED turns **ON when both parking slots are occupied**.
-17. Press a slot button again to simulate the vehicle leaving the parking space.
+3. Add a **potentiometer**.
+4. Connect the potentiometer VCC pin to **3.3V**.
+5. Connect the potentiometer GND pin to **GND**.
+6. Connect the potentiometer SIG pin to **PA0**.
+7. Enter the STM32 HAL program.
+8. Compile the program.
+9. Start the simulation.
+10. Open the **Serial Monitor**.
+11. Rotate the potentiometer to simulate different water levels.
+12. Observe the ADC value, water-level percentage, and water-level status.
 
 ---
 
 ## Expected Output
+<img width="1035" height="806" alt="image" src="https://github.com/user-attachments/assets/51965fd1-7bf1-459d-bae7-5e20dbc848ad" />
 
-### Initially – Both Slots Available
 
-~~~text
-Slot 1: AVAILABLE
-Slot 2: AVAILABLE
-Available Slots: 2
-Parking Status: SPACE AVAILABLE
-Entry Gate: OPEN
-~~~
 
-### Vehicle in Slot 1
+
+
+### Low Water Level
 
 ~~~text
-Slot 1: OCCUPIED
-Slot 2: AVAILABLE
-Available Slots: 1
-Parking Status: SPACE AVAILABLE
-Entry Gate: OPEN
+ADC Value: 800
+Water Level: 19%
+Status: LOW
 ~~~
 
-### Both Slots Occupied
+### Medium Water Level
 
 ~~~text
-Slot 1: OCCUPIED
-Slot 2: OCCUPIED
-Available Slots: 0
-Parking Status: FULL
-Entry Gate: CLOSED
+ADC Value: 2200
+Water Level: 53%
+Status: MEDIUM
 ~~~
 
-The onboard LED connected to **PB3** turns **ON** when the parking area is full.
+### High Water Level
+
+~~~text
+ADC Value: 3500
+Water Level: 85%
+Status: HIGH
+~~~
 
 ---
 
 ## Working
 
-The two pushbuttons simulate vehicle-detection sensors for two parking slots. The STM32 continuously monitors the pushbuttons through the GPIO input pins **PA12** and **PB0**.
+The potentiometer produces an analog voltage that represents the water level in the tank.
 
-When a pushbutton is pressed, the program changes the status of the corresponding parking slot between **AVAILABLE** and **OCCUPIED**.
+The STM32 reads this analog voltage through the **PA0 ADC input**. Since the ADC has a **12-bit resolution**, the analog signal is converted into a digital value between **0 and 4095**.
 
-The STM32 then calculates the available parking spaces using:
+The ADC value is converted into water-level percentage using:
 
-`Available Slots = Total Slots - Occupied Slots`
+`Water Level (%) = (ADC Value × 100) / 4095`
 
-For this experiment, the total number of parking slots is **2**.
+The STM32 then classifies the water level as:
 
-If both parking slots are occupied, the number of available slots becomes zero. The STM32 switches the **PB3 onboard LED ON** to indicate **Parking Full**.
+- **0–30% → LOW**
+- **31–70% → MEDIUM**
+- **71–100% → HIGH**
 
-If one or more parking slots are available, the LED remains **OFF**.
-
-The status of each parking slot, number of available spaces, parking condition, and entry-gate status are transmitted through **USART2** and displayed on the **Wokwi Serial Monitor**.
-
----
-
-## Applications
-
-- Shopping mall parking systems
-- Hospital parking areas
-- College and university campuses
-- Office parking facilities
-- Airport parking systems
-- Smart city parking systems
-- Residential parking management
+The ADC value, percentage, and water-level status are transmitted through **USART2** and displayed on the **Wokwi Serial Monitor**.
 
 ---
 
 ## Result
 
-Thus, the **Automatic Vehicle Parking System using STM32 Nucleo-L031K6** was designed and implemented successfully. The system detected the simulated occupancy of parking slots, calculated the number of available spaces, indicated the **Parking Full** condition using the onboard LED, and displayed the parking status on the **Wokwi Serial Monitor**.
+Thus, the **Water Level Indicator using STM32 Nucleo-L031K6** was designed and implemented successfully. The water level was measured using the ADC and displayed as **LOW, MEDIUM, or HIGH** on the Wokwi Serial Monitor.
